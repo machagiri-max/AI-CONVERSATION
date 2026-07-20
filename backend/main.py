@@ -1,0 +1,58 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+from groq import Groq
+import os
+
+load_dotenv()
+
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
+)
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class ChatRequest(BaseModel):
+    message: str
+
+@app.get("/")
+def home():
+    return {
+        "message": "Groq AI Backend Running"
+    }
+
+@app.post("/chat")
+def chat(req: ChatRequest):
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful AI coding assistant."
+                },
+                {
+                    "role": "user",
+                    "content": req.message
+                }
+            ]
+        )
+
+        return {
+            "response": response.choices[0].message.content
+        }
+
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
